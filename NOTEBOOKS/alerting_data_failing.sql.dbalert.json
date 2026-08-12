@@ -1,0 +1,29 @@
+{
+  "evaluation": {
+    "source": {
+      "name": "failing_checks",
+      "display": "failing_checks",
+      "aggregation": "AGGREGATION_UNSPECIFIED"
+    },
+    "comparison_operator": "GREATER_THAN",
+    "threshold": {
+      "value": {
+        "double_value": 0.0
+      }
+    },
+    "empty_result_state": "TRIGGERED",
+    "notification": {
+      "retrigger_seconds": 1,
+      "notify_on_ok": true
+    }
+  },
+  "schedule": {
+    "quartz_cron_schedule": "36 36 * * * ?",
+    "timezone_id": "America/Indianapolis"
+  },
+  "query_lines": [
+    "SELECT COUNT(*) AS failing_checks",
+    "FROM airbnb_obs.monitoring.v_current_dq_state",
+    "WHERE status = 'FAIL'"
+  ]
+}
