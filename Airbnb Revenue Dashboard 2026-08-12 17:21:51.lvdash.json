@@ -1,0 +1,653 @@
+{
+  "datasets": [
+    {
+      "name": "bookings",
+      "displayName": "Bookings",
+      "config": {
+        "version": "1.1",
+        "source": "airbnb_obs.gold.fact_bookings",
+        "dimensions": [
+          {
+            "name": "booking_id",
+            "expr": "booking_id"
+          },
+          {
+            "name": "listing_id",
+            "expr": "listing_id"
+          },
+          {
+            "name": "booking_date",
+            "expr": "booking_date"
+          },
+          {
+            "name": "booking_status",
+            "expr": "booking_status"
+          }
+        ],
+        "measures": [
+          {
+            "name": "revenue",
+            "expr": "SUM(booking_amount)"
+          },
+          {
+            "name": "booking_count",
+            "expr": "COUNT(booking_id)"
+          },
+          {
+            "name": "cancelled_bookings",
+            "expr": "COUNT(CASE WHEN LOWER(booking_status) IN ('cancelled', 'canceled') THEN booking_id END)"
+          },
+          {
+            "name": "total_bookings",
+            "expr": "COUNT(booking_id)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listings",
+      "displayName": "Listings",
+      "config": {
+        "version": "1.1",
+        "source": "airbnb_obs.gold.dim_listings",
+        "dimensions": [
+          {
+            "name": "listing_id",
+            "expr": "listing_id"
+          },
+          {
+            "name": "property_type",
+            "expr": "property_type"
+          },
+          {
+            "name": "city",
+            "expr": "city"
+          },
+          {
+            "name": "country",
+            "expr": "country"
+          }
+        ],
+        "measures": [
+          {
+            "name": "listing_count",
+            "expr": "COUNT(listing_id)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "booking_analysis",
+      "displayName": "Booking Analysis",
+      "config": {
+        "version": "1.1",
+        "source": "SELECT \n  b.booking_id,\n  b.listing_id,\n  b.booking_date,\n  b.booking_status,\n  b.nights_booked,\n  b.booking_amount,\n  b.cleaning_fee,\n  b.service_fee,\n  l.property_type,\n  l.city,\n  l.country,\n  l.host_id\nFROM airbnb_obs.gold.fact_bookings b INNER JOIN airbnb_obs.gold.dim_listings l ON b.listing_id = l.listing_id\n",
+        "dimensions": [
+          {
+            "name": "booking_id",
+            "expr": "booking_id"
+          },
+          {
+            "name": "booking_date",
+            "expr": "booking_date"
+          },
+          {
+            "name": "booking_status",
+            "expr": "booking_status"
+          },
+          {
+            "name": "property_type",
+            "expr": "property_type"
+          },
+          {
+            "name": "city",
+            "expr": "city"
+          },
+          {
+            "name": "country",
+            "expr": "country"
+          }
+        ],
+        "measures": [
+          {
+            "name": "total_revenue",
+            "expr": "SUM(booking_amount)"
+          },
+          {
+            "name": "total_bookings",
+            "expr": "COUNT(booking_id)"
+          },
+          {
+            "name": "cancelled_bookings",
+            "expr": "COUNT(CASE WHEN LOWER(booking_status) IN ('cancelled', 'canceled') THEN booking_id END)"
+          },
+          {
+            "name": "cancellation_rate",
+            "expr": "COUNT(CASE WHEN LOWER(booking_status) IN ('cancelled', 'canceled') THEN booking_id END) * 100.0 / COUNT(booking_id)"
+          }
+        ]
+      }
+    },
+    {
+      "name": "top_10_cities",
+      "displayName": "Top 10 Cities by Revenue",
+      "config": {
+        "version": "1.1",
+        "source": "SELECT \n  l.city,\n  SUM(b.booking_amount) as total_revenue\nFROM airbnb_obs.gold.fact_bookings b INNER JOIN airbnb_obs.gold.dim_listings l ON b.listing_id = l.listing_id GROUP BY l.city ORDER BY total_revenue DESC LIMIT 10\n",
+        "dimensions": [
+          {
+            "name": "city",
+            "expr": "city"
+          }
+        ],
+        "measures": [
+          {
+            "name": "total_revenue",
+            "expr": "SUM(total_revenue)"
+          }
+        ]
+      }
+    }
+  ],
+  "relationshipGraphs": [
+    {
+      "sources": [
+        {
+          "name": "Bookings",
+          "datasetName": "bookings"
+        },
+        {
+          "name": "Listings",
+          "datasetName": "listings"
+        },
+        {
+          "name": "Booking_Analysis",
+          "datasetName": "booking_analysis"
+        },
+        {
+          "name": "Top_10_Cities_by_Revenue",
+          "datasetName": "top_10_cities"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "34c7444d",
+      "displayName": "Airbnb Revenue Dashboard",
+      "layout": [
+        {
+          "widget": {
+            "name": "total_revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Booking_Analysis__total_revenue)",
+                      "expression": "MEASURE(`Booking_Analysis`.`total_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "title": "Total Revenue Generated",
+                "showTitle": true
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Booking_Analysis__total_revenue)",
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "total_bookings",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Booking_Analysis__total_bookings)",
+                      "expression": "MEASURE(`Booking_Analysis`.`total_bookings`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "title": "Total Booking Volume",
+                "showTitle": true
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Booking_Analysis__total_bookings)",
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "cancellation_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Booking_Analysis__cancellation_rate)",
+                      "expression": "MEASURE(`Booking_Analysis`.`cancellation_rate`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "title": "Overall Cancellation Rate",
+                "showTitle": true
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(Booking_Analysis__cancellation_rate)",
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  },
+                  "formatTemplate": "{{ @formatted }}%"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "bookings_by_type",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Booking_Analysis__property_type",
+                      "expression": "`Booking_Analysis`.`property_type`"
+                    },
+                    {
+                      "name": "measure(Booking_Analysis__total_revenue)",
+                      "expression": "MEASURE(`Booking_Analysis`.`total_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "frame": {
+                "title": "Revenue by Property Category",
+                "showTitle": true
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Booking_Analysis__property_type",
+                  "displayName": "property_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Booking_Analysis__total_revenue)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "displayName": "Total Revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Booking_Analysis__property_type",
+                  "displayName": "property_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "top_cities",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Top_10_Cities_by_Revenue__city",
+                      "expression": "`Top_10_Cities_by_Revenue`.`city`"
+                    },
+                    {
+                      "name": "measure(Top_10_Cities_by_Revenue__total_revenue)",
+                      "expression": "MEASURE(`Top_10_Cities_by_Revenue`.`total_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "title": "Top 10 Cities by Revenue",
+                "showTitle": true
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Top_10_Cities_by_Revenue__city",
+                  "displayName": "city",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Top_10_Cities_by_Revenue__total_revenue)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "displayName": "total_revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Top_10_Cities_by_Revenue__city",
+                  "displayName": "city",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "booking_status_donut",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "measure(Booking_Analysis__total_bookings)",
+                      "expression": "MEASURE(`Booking_Analysis`.`total_bookings`)"
+                    },
+                    {
+                      "name": "Booking_Analysis__booking_status",
+                      "expression": "`Booking_Analysis`.`booking_status`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "title": "Booking Status Distribution",
+                "showTitle": true
+              },
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "measure(Booking_Analysis__total_bookings)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact"
+                  },
+                  "displayName": "Total Bookings"
+                },
+                "color": {
+                  "fieldName": "Booking_Analysis__booking_status",
+                  "displayName": "Booking Status",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "cancelled",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 6
+                        }
+                      },
+                      {
+                        "value": "confirmed",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 3
+                        }
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue_over_years",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "monthly(Booking_Analysis__booking_date)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `Booking_Analysis`.`booking_date`)"
+                    },
+                    {
+                      "name": "measure(Booking_Analysis__total_revenue)",
+                      "expression": "MEASURE(`Booking_Analysis`.`total_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "title": "Revenue Trend Over Time",
+                "showTitle": true
+              },
+              "version": 3,
+              "mark": {
+                "marker": {
+                  "shape": "star"
+                }
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(Booking_Analysis__booking_date)",
+                  "axis": {
+                    "hideLabels": false,
+                    "hideGrid": false
+                  },
+                  "displayName": "Month",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(Booking_Analysis__total_revenue)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "axis": {
+                    "hideLabels": false,
+                    "hideGrid": true,
+                    "hideTitle": false
+                  },
+                  "displayName": "Total Revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 12,
+            "height": 4
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
